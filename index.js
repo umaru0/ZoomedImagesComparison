@@ -4,206 +4,260 @@ const ITEM_REGION_SIZE_X = 20;
 const ITEM_REGION_SIZE_Y = 20;
 
 class ImageController {
-  /** @type {HTMLInputElement} */ #inputElement;
-  /** @type {HTMLInputElement} */ #zoomChangerElement;
-  /** @type {HTMLImageElement} */ #itemElement;
-  /** @type {HTMLDivElement} */ #itemRegionElement;
-  /** @type {HTMLDivElement} */ #itemZoomElement;
-  /** @type {HTMLImageElement} */ #itemZoomedElement;
-  /** @type {ImageControllerCollection} */ #collection;
-  /** @type {DOMRect} */ #itemRect;
-  /** @type {Number} */ #scaleX;
-  /** @type {Number} */ #scaleY;
-  /** @type {Number} */ #cursorX;
-  /** @type {Number} */ #cursorY;
+    #inputElement;
+    #itemElement;
+    #itemRegionElement;
+    #itemZoomElement;
+    #itemZoomedElement;
+    #collection;
+    #itemRect;
+    #scaleX;
+    #scaleY;
+    #cursorX;
+    #cursorY;
+    #isHovered = false;
 
-  /**
-   * @param {HTMLInputElement} inputElement
-   * @param {HTMLInputElement} zoomChangerElement
-   * @param {HTMLDivElement} containerElement
-   */
-  constructor(inputElement, zoomChangerElement, containerElement) {
-    this.#inputElement = inputElement;
-    this.#zoomChangerElement = zoomChangerElement;
-    this.#itemElement = containerElement.querySelector(".image-item");
-    this.#itemRegionElement =
-      containerElement.querySelector(".image-item-region");
-    this.#itemZoomElement = containerElement.querySelector(".image-item-zoom");
-    this.#itemZoomedElement =
-      containerElement.querySelector(".image-item-zoomed");
+    constructor(inputElement, containerElement) {
+        this.#inputElement = inputElement;
+        this.#itemElement = containerElement.querySelector(".image-item");
+        this.#itemRegionElement = containerElement.querySelector(".image-item-region");
+        this.#itemZoomElement = containerElement.querySelector(".image-item-zoom");
+        this.#itemZoomedElement = containerElement.querySelector(".image-item-zoomed");
 
-    this.#inputElement.addEventListener(
-      "change",
-      this.#OnInputElementChange.bind(this)
-    );
+        this.#inputElement.addEventListener("change", this.#OnInputElementChange.bind(this));
+        this.#itemElement.addEventListener("mousemove", this.#OnItemElementMouseMove.bind(this));
+        this.#itemElement.addEventListener("mouseleave", this.#OnMouseLeave.bind(this));
+        this.#itemElement.addEventListener("touchmove", this.#OnItemElementTouchMove.bind(this), { passive: true });
+        this.#itemElement.addEventListener("load", this.#OnItemElementResize.bind(this), { passive: true });
+        this.#itemElement.addEventListener("mouseenter", this.#OnMouseEnter.bind(this));
+        window.addEventListener("resize", this.#OnItemElementResize.bind(this), { passive: true });
+    }
 
-    this.#zoomChangerElement.addEventListener(
-      "change",
-      this.#OnZoomChangerElementChange.bind(this)
-    );
+    get Collection() { return this.#collection; }
+    set Collection(value) { this.#collection = value; }
 
-    this.#itemElement.addEventListener(
-      "mousemove",
-      this.#OnItemElementMouseMove.bind(this)
-    );
-    this.#itemElement.addEventListener(
-      "touchmove",
-      this.#OnItemElementTouchMove.bind(this)
-    );
-    this.#itemElement.addEventListener(
-      "load",
-      this.#OnItemElementResize.bind(this)
-    );
-    this.#itemElement.addEventListener(
-      "resize",
-      this.#OnItemElementResize.bind(this)
-    );
+    Move(cursorX, cursorY) {
+        if (!this.#itemRect || !this.#isHovered) return;
 
-    window.addEventListener("resize", this.#OnItemElementResize.bind(this));
-  }
+        const regionX = cursorX - ITEM_REGION_SIZE_X / 2;
+        const regionY = cursorY - ITEM_REGION_SIZE_Y / 2;
+        const squareRight = regionX + ITEM_REGION_SIZE_X;
+        const squareBottom = regionY + ITEM_REGION_SIZE_Y;
+        const offsetX = 10;
+        const offsetY = 10;
+        const zoomX = squareRight + offsetX;
+        const zoomY = squareBottom + offsetY;
+        const x = -cursorX * this.#scaleX + ITEM_ZOOM_SIZE_X / 2;
+        const y = -cursorY * this.#scaleY + ITEM_ZOOM_SIZE_Y / 2;
 
-  get Collection() {
-    return this.#collection;
-  }
-  set Collection(value) {
-    this.#collection = value;
-  }
+        this.#itemRegionElement.style.transform = `translate(${regionX}px, ${regionY}px)`;
+        this.#itemZoomElement.style.transform = `translate(${zoomX}px, ${zoomY}px)`;
+        this.#itemZoomedElement.style.transform = `translate(${x}px, ${y}px)`;
+    }
 
-  /**
-   * @param {Number} cursorX
-   * @param {Number} cursorY
-   */
-  Move(cursorX, cursorY) {
-    if (!this.#itemRect) return;
+    UpdateScale(scale) {
+        const zoomValue = document.getElementById("zoom-value");
+        const baseZoomSize = Math.min(ITEM_ZOOM_SIZE_X, ITEM_ZOOM_SIZE_Y) * 6;
+        
+        if (!this.#itemZoomedElement.naturalWidth) return;
+        
+        const imageAspectRatio = this.#itemZoomedElement.naturalWidth / this.#itemZoomedElement.naturalHeight;
+        const normalizedScale = scale * (baseZoomSize / Math.max(this.#itemZoomedElement.naturalWidth, this.#itemZoomedElement.naturalHeight * imageAspectRatio));
 
-    const x = -cursorX * this.#scaleX + ITEM_ZOOM_SIZE_X / 2;
-    const y = -cursorY * this.#scaleY + ITEM_ZOOM_SIZE_Y / 2;
+        this.#itemZoomedElement.style.width = `${this.#itemZoomedElement.naturalWidth * normalizedScale}px`;
+        this.#itemZoomedElement.style.height = `${this.#itemZoomedElement.naturalHeight * normalizedScale}px`;
 
-    this.#itemRegionElement.style.transform = `translate(${cursorX}px, ${
-      cursorY - ITEM_REGION_SIZE_Y
-    }px)`;
-    this.#itemZoomElement.style.transform = `translate(${cursorX}px, ${cursorY}px)`;
-    this.#itemZoomedElement.style.transform = `translate(${x}px, ${y}px)`;
-  }
+        this.#scaleX = this.#itemZoomedElement.clientWidth / this.#itemElement.clientWidth;
+        this.#scaleY = this.#itemZoomedElement.clientHeight / this.#itemElement.clientHeight;
+        this.#itemRect = this.#itemElement.getBoundingClientRect();
 
-  #UpdateScale() {
-    this.#itemZoomedElement.style.width = `${
-      this.#itemZoomedElement.naturalWidth * this.#zoomChangerElement.value
-    }px`;
-    this.#itemZoomedElement.style.height = `${
-      this.#itemZoomedElement.naturalHeight * this.#zoomChangerElement.value
-    }px`;
+        zoomValue.textContent = `x${scale.toFixed(1)}`;
 
-    this.#scaleX =
-      this.#itemZoomedElement.clientWidth / this.#itemElement.clientWidth;
-    this.#scaleY =
-      this.#itemZoomedElement.clientHeight / this.#itemElement.clientHeight;
-    this.#itemRect = this.#itemElement.getBoundingClientRect();
+        this.#UpdatePosition();
+    }
 
-    this.#UpdatePosition();
-  }
+    #UpdatePosition() {
+        if (this.#collection) this.#collection.MoveAll(this.#cursorX, this.#cursorY);
+        else this.Move(this.#cursorX, this.#cursorY);
+    }
 
-  #UpdatePosition() {
-    if (this.#collection)
-      this.#collection.MoveAll(this.#cursorX, this.#cursorY);
-    else this.Move(this.#cursorX, this.#cursorY);
-  }
+    #OnInputElementChange(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        const dropZone = this.#itemElement.closest(".image-container").querySelector(".drop-zone");
 
-  /**
-   * @param {Event} e
-   */
-  #OnInputElementChange(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
+        reader.onload = (e) => {
+            const imageUrl = e.target.result;
+            this.#itemElement.src = imageUrl;
+            this.#itemZoomedElement.src = imageUrl;
 
-    reader.onload = (e) => {
-      const imageUrl = e.target.result;
+            this.#itemRegionElement.style.display = "block";
+            this.#itemZoomElement.style.display = "none";
+            this.#itemZoomedElement.style.display = "none";
+            this.#itemRegionElement.style.display = "block";
 
-      this.#itemElement.src = imageUrl;
-      this.#itemZoomedElement.src = imageUrl;
-    };
+            const fileInfo = this.#inputElement.closest(".image-container").querySelector(".file-info");
+            const size = (file.size / (1024 * 1024)).toFixed(2) + " МБ";
+            const name = file.name;
+            const img = new Image();
+            img.onload = () => {
+                fileInfo.textContent = `Имя: ${name} | Размер: ${size} | Разрешение: ${img.width}x${img.height} | Формат: ${file.type.split('/')[1]}`;
+            };
+            img.src = imageUrl;
 
-    reader.readAsDataURL(file);
-  }
+            dropZone.classList.add("hidden");
+        };
 
-  /**
-   * @param {Event} e
-   */
-  #OnZoomChangerElementChange(e) {
-    this.#UpdateScale();
-  }
+        reader.readAsDataURL(file);
+    }
 
-  /**
-   * @param {TouchEvent} e
-   */
-  #OnItemElementTouchMove(e) {
-    this.#SetCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
-    this.#UpdatePosition();
-  }
+    #OnItemElementTouchMove(e) {
+        e.preventDefault();
+        this.#SetCursorPosition(e.touches[0].clientX, e.touches[0].clientY);
+        this.#UpdatePosition();
+        this.#ShowZoomElements();
+    }
 
-  /**
-   * @param {MouseEvent} e
-   */
-  #OnItemElementMouseMove(e) {
-    this.#SetCursorPosition(e.clientX, e.clientY);
-    this.#UpdatePosition();
-  }
+    #OnItemElementMouseMove(e) {
+        this.#SetCursorPosition(e.clientX, e.clientY);
+        this.#UpdatePosition();
+        this.#ShowZoomElements();
+    }
 
-  /**
-   * @param {Number} clientX
-   * @param {Number} clientY
-   */
-  #SetCursorPosition(clientX, clientY) {
-    this.#cursorX = clientX - this.#itemRect.left + window.scrollX;
-    this.#cursorY = clientY - this.#itemRect.top + window.scrollY;
-  }
+    #OnMouseEnter() {
+        this.#isHovered = true;
+        this.#ShowZoomElements();
+    }
 
-  /**
-   * @param {Event} e
-   */
-  #OnItemElementResize(e) {
-    this.#UpdateScale();
-  }
+    #OnMouseLeave() {
+        this.#isHovered = false;
+        this.#HideZoomElements();
+    }
+
+    #ShowZoomElements() {
+        if (this.#itemElement.src && this.#isHovered) {
+            this.#itemZoomElement.style.display = "block";
+            this.#itemZoomedElement.style.display = "block";
+            this.#itemRegionElement.style.display = "block";
+        }
+    }
+
+    #HideZoomElements() {
+        this.#itemZoomElement.style.display = "none";
+        this.#itemZoomedElement.style.display = "none";
+        this.#itemRegionElement.style.display = "none";
+    }
+
+    #SetCursorPosition(clientX, clientY) {
+        if (!this.#itemRect) return;
+        
+        this.#cursorX = clientX - this.#itemRect.left;
+        this.#cursorY = clientY - this.#itemRect.top;
+        
+        this.#cursorX = Math.max(0, Math.min(this.#cursorX, this.#itemRect.width));
+        this.#cursorY = Math.max(0, Math.min(this.#cursorY, this.#itemRect.height));
+    }
+
+    #OnItemElementResize() {
+        const currentScale = parseFloat(document.getElementById("image-zoom-changer").value);
+        this.#itemRect = this.#itemElement.getBoundingClientRect();
+        this.UpdateScale(currentScale);
+    }
 }
 
 class ImageControllerCollection {
-  /** @type {ImageController[]} */ #items = [];
+    constructor() {
+        this._items = [];
+    }
 
-  /**
-   * @param {HTMLInputElement} inputElement
-   * @param {HTMLInputElement} zoomChangerElement
-   * @param {HTMLDivElement} containerElement
-   */
-  Add(inputElement, zoomChangerElement, containerElement) {
-    const controller = new ImageController(
-      inputElement,
-      zoomChangerElement,
-      containerElement
-    );
+    Add(inputElement, containerElement) {
+        const controller = new ImageController(inputElement, containerElement);
+        controller.Collection = this;
+        this._items.push(controller);
+    }
 
-    controller.Collection = this;
+    MoveAll(cursorX, cursorY) {
+        for (let item of this._items) item.Move(cursorX, cursorY);
+    }
 
-    this.#items.push(controller);
-  }
-
-  /**
-   * @param {Number} cursorX
-   * @param {Number} cursorY
-   */
-  MoveAll(cursorX, cursorY) {
-    for (let item of this.#items) item.Move(cursorX, cursorY);
-  }
+    updateAllScale(scale) {
+        for (let item of this._items) item.UpdateScale(scale);
+    }
 }
 
 const collection = new ImageControllerCollection();
 
 collection.Add(
-  document.getElementById("image-input-1"),
-  document.getElementById("image-zoom-changer-1"),
-  document.getElementById("image-container-1")
+    document.getElementById("image-input-1"),
+    document.getElementById("image-container-1")
 );
 collection.Add(
-  document.getElementById("image-input-2"),
-  document.getElementById("image-zoom-changer-2"),
-  document.getElementById("image-container-2")
+    document.getElementById("image-input-2"),
+    document.getElementById("image-container-2")
 );
+
+const zoomChanger = document.getElementById("image-zoom-changer");
+const zoomContainer = document.querySelector(".single-zoom");
+
+zoomChanger.addEventListener("input", (e) => {
+    const scale = parseFloat(e.target.value);
+    collection.updateAllScale(scale);
+});
+
+const zoomButtons = document.querySelectorAll(".zoom-btn");
+zoomButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        const step = parseFloat(btn.dataset.step);
+        const newValue = Math.min(3, Math.max(0.1, parseFloat(zoomChanger.value) + step));
+        zoomChanger.value = newValue;
+        collection.updateAllScale(newValue);
+    });
+});
+
+let wheelTimeout;
+zoomContainer.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    clearTimeout(wheelTimeout);
+
+    const step = e.deltaY > 0 ? -0.1 : 0.1;
+    const newValue = Math.min(3, Math.max(0.1, parseFloat(zoomChanger.value) + step));
+    zoomChanger.value = newValue;
+    collection.updateAllScale(newValue);
+
+    wheelTimeout = setTimeout(() => {}, 100);
+}, { passive: false });
+
+const dropZones = {
+    1: { zone: document.getElementById("drop-zone-1"), input: document.getElementById("image-input-1") },
+    2: { zone: document.getElementById("drop-zone-2"), input: document.getElementById("image-input-2") }
+};
+
+Object.values(dropZones).forEach(({ zone, input }) => {
+    zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        zone.classList.add("dragover");
+    });
+
+    zone.addEventListener("dragleave", () => {
+        zone.classList.remove("dragover");
+    });
+
+    zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+        if (files.length > 0) {
+            const file = files[0];
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+            input.dispatchEvent(new Event("change"));
+        }
+    });
+
+    zone.addEventListener("click", () => {
+        input.click();
+    });
+});
