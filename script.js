@@ -1,7 +1,23 @@
 const ITEM_ZOOM_SIZE_X = 150;
 const ITEM_ZOOM_SIZE_Y = 150;
+const ITEM_ZOOM_TRANSFORM_X = -10;
+const ITEM_ZOOM_TRANSFORM_Y = 10;
 const ITEM_REGION_SIZE_X = 20;
 const ITEM_REGION_SIZE_Y = 20;
+
+const style = document.createElement("style");
+
+style.innerHTML = `
+* {
+  --item-zoom-size-x: ${ITEM_ZOOM_SIZE_X}px;
+  --item-zoom-size-y: ${ITEM_ZOOM_SIZE_Y}px;
+  --item-zoom-transform: translate(${ITEM_ZOOM_TRANSFORM_X}px, ${ITEM_ZOOM_TRANSFORM_Y}px);
+  --item-region-size-x: ${ITEM_REGION_SIZE_X}px;
+  --item-region-size-y: ${ITEM_REGION_SIZE_Y}px;
+}
+`;
+
+document.head.appendChild(style);
 
 class ImageController extends EventTarget {
   /** @type {HTMLInputElement} */ #itemInputElement;
