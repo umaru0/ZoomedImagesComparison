@@ -393,8 +393,8 @@ class ImageCollectionController {
    * @param {CustomEvent} e
    */
   #OnWheel(e) {
-    if (e.detail.deltaY > 0) zoomController.StepForward();
-    else if (e.detail.deltaY < 0) zoomController.StepBack();
+    if (e.detail.deltaY > 0) zoomController.StepBack();
+    else if (e.detail.deltaY < 0) zoomController.StepForward();
   }
 
   #OnZoomChanged() {
