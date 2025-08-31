@@ -74,13 +74,23 @@ h1 {
   align-items: center;
 }
 
-.image-drag-prompt {
-  display: block;
-  font-family: "Press Start 2P", system-ui;
-  font-size: 13px;
-  color: #555;
-  text-align: center;
+:root {
+  --text-gray: #555;
+  --font-family: "Press Start 2P", system-ui;
+  --font-size: 13px;
+}
+
+.image-drag-prompt,
+.image-info {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  color: var(--text-gray);
   margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.image-drag-prompt {
+  text-align: center;
 }
 
 .image-drag-prompt.hidden {
@@ -88,13 +98,19 @@ h1 {
 }
 
 .image-info {
-  display: block;
-  font-family: "Press Start 2P", system-ui;
-  font-size: 13px;
-  color: #555;
   text-align: left;
-  margin-bottom: 10px;
-  line-height: 1.6;
+}
+
+.image-info.hidden {
+  display: none;
+}
+
+/* Адаптивность */
+@media (max-width: 600px) {
+  .image-drag-prompt,
+  .image-info {
+    font-size: 15px;
+  }
 }
 
 .image-info.hidden {
