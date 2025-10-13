@@ -282,12 +282,9 @@ class ImageController extends EventTarget {
   #OnItemElementLoad(e) {
     const size = (this.#file.size / (1024 * 1024)).toFixed(2) + " МБ";
     const name = this.#file.name;
+    const format = this.#file.type.split("/")[1];
 
-    this.#infoElement.innerText = `
-          Имя: ${name}
-          Размер: ${size}
-          Разрешение: ${e.target.width}x${e.target.height}
-          Формат: ${this.#file.type.split("/")[1]}`;
+    this.#infoElement.innerText = `Размер: ${size}\nРазрешение: ${e.target.width}x${e.target.height}\nФормат: ${format}`;
   }
 
   /**
