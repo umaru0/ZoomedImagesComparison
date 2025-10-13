@@ -1,0 +1,43 @@
+name: Deploy Dev to GitHub Pages
+
+on:
+  push:
+    branches: ["dev"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+        
+      - name: Create dev directory
+        run: mkdir -p dev-build
+        
+      - name: Copy files to dev-build
+        run: |
+          cp index.html dev-build/
+          cp style.css dev-build/
+          cp script.js dev-build/
+      
+      - name: Modify base paths for dev subdirectory
+        run: |
+          cd dev-build
+          sed -i 's|href="style.css"|href="style.css"|g' index.html
+          sed -i 's|src="script.js"|src="script.js"|g' index.html
+          
+      - name: Deploy to GitHub Pages (dev subfolder)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dev-build
+          destination_dir: dev
+          keep_files: true
