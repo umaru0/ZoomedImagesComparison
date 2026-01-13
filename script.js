@@ -202,6 +202,10 @@ class ImageController extends EventTarget {
    * @param {Number} clientY
    */
   #GetCursorPosition(clientX, clientY) {
+    if (!this.#itemRect) {
+      this.#itemRect = this.#itemElement.getBoundingClientRect();
+    }
+
     const cursorX = clientX - this.#itemRect.left + window.scrollX;
     const cursorY = clientY - this.#itemRect.top + window.scrollY;
 
@@ -280,11 +284,15 @@ class ImageController extends EventTarget {
    * @param {Event} e
    */
   #OnItemElementLoad(e) {
+    if (!this.#file) return;
+
     const size = (this.#file.size / (1024 * 1024)).toFixed(2) + " МБ";
     const name = this.#file.name;
     const format = this.#file.type.split("/")[1];
+    const width = e.target.naturalWidth || e.target.width;
+    const height = e.target.naturalHeight || e.target.height;
 
-    this.#infoElement.innerText = `Размер: ${size}\nРазрешение: ${e.target.width}x${e.target.height}\nФормат: ${format}`;
+    this.#infoElement.innerText = `Размер: ${size}\nРазрешение: ${width}x${height}\nФормат: ${format}`;
   }
 
   /**
